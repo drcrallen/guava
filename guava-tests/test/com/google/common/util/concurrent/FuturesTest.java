@@ -39,6 +39,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -3681,6 +3682,56 @@ public class FuturesTest extends TestCase {
     AssertionFailedError failure = new AssertionFailedError(message);
     failure.initCause(cause);
     return failure;
+  }
+
+  @GwtIncompatible("TODO")
+  public void testDirectFuture() throws InterruptedException, ExecutionException
+  {
+    ListeningExecutorService indirectService = MoreExecutors.listeningDecorator(
+        Executors.newSingleThreadExecutor()
+    );
+    try {
+      indirectService.submit(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              try {
+                Thread.sleep(1000);
+              }
+              catch (InterruptedException e) {
+                throw Throwables.propagate(e);
+              }
+            }
+          }
+      ).get(1, TimeUnit.MILLISECONDS);
+      fail("Did not timeout");
+    }catch(TimeoutException ex){
+      // success
+    }
+
+    ListeningExecutorService directService = MoreExecutors.newDirectExecutorService();
+    try {
+      directService.submit(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              try {
+                Thread.sleep(1000);
+              }
+              catch (InterruptedException e) {
+                throw Throwables.propagate(e);
+              }
+            }
+          }
+      ).get(1, TimeUnit.MILLISECONDS);
+      fail("Did not timeout");
+    }catch(TimeoutException ex){
+      // success
+    }
   }
 
   /**
